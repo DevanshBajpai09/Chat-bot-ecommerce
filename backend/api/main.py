@@ -1,19 +1,14 @@
-import sys
-import os
-
-# ✅ Add parent dir to Python path to resolve 'backend' imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models.conversations import Conversation, Message
 from backend.models.models import User
+from backend.schemas.chat import ChatRequest, ChatResponse
 from datetime import datetime
 
 app = FastAPI()
 
-# Dependency
+# DB Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -21,27 +16,49 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/")
-def root():
-    return {"message": "AI Conversation API is live 🚀"}
+@app.post("/api/chat", response_model=ChatResponse)
+def chat(request: ChatRequest, db: Session = Depends(get_db)):
+    # Check if user exists
+    user = db.query(User).filter(User.id == request.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-@app.post("/users/{user_id}/conversations/")
-def create_conversation(user_id: int, db: Session = Depends(get_db)):
-    conv = Conversation(user_id=user_id)
-    db.add(conv)
+    # If no conversation_id, create a new one
+    if not request.conversation_id:
+        conversation = Conversation(user_id=request.user_id)
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+    else:
+        conversation = db.query(Conversation).filter_by(id=request.conversation_id).first()
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Store user's message
+    user_msg = Message(
+        conversation_id=conversation.id,
+        role="user",
+        content=request.message,
+        timestamp=datetime.utcnow()
+    )
+    db.add(user_msg)
+
+    # Generate a dummy AI response (for now)
+    ai_reply_text = f"🤖 This is a dummy response to: {request.message}"
+
+    # Store AI response
+    ai_msg = Message(
+        conversation_id=conversation.id,
+        role="ai",
+        content=ai_reply_text,
+        timestamp=datetime.utcnow()
+    )
+    db.add(ai_msg)
+
     db.commit()
-    db.refresh(conv)
-    return conv
 
-@app.post("/conversations/{conv_id}/messages/")
-def add_message(conv_id: int, role: str, content: str, db: Session = Depends(get_db)):
-    msg = Message(conversation_id=conv_id, role=role, content=content, timestamp=datetime.utcnow())
-    db.add(msg)
-    db.commit()
-    db.refresh(msg)
-    return msg
-
-@app.get("/conversations/{conv_id}/messages/")
-def get_conversation(conv_id: int, db: Session = Depends(get_db)):
-    messages = db.query(Message).filter_by(conversation_id=conv_id).order_by(Message.timestamp).all()
-    return messages
+    return ChatResponse(
+        conversation_id=conversation.id,
+        user_message=request.message,
+        ai_response=ai_reply_text
+    )
