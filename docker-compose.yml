@@ -22,7 +22,7 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgresql://devansh:secret@db:5432/chatdb
+      DATABASE_URL: 'postgresql://neondb_owner:npg_6QUqIMu0jyvT@ep-sweet-shape-ad4y75y4-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
     ports:
       - "8000:8000"
     volumes:

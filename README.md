@@ -4,6 +4,12 @@ A full-stack AI chatbot-based e-commerce assistant built with **React (Vite)** f
 
 ---
 
+## Image
+
+![Chatbot Homepage](./image.png)
+
+
+
 ## 📁 Folder Structure
 
 ```

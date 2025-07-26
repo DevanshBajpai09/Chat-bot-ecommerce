@@ -1,6 +1,6 @@
 # backend/models/conversations.py
 from sqlalchemy import Column, Integer, ForeignKey, String, DateTime
-from backend.models.base import Base  # ✅ shared base again
+from models.base import Base  # ✅ shared base again
 
 class Conversation(Base):
     __tablename__ = "conversations"

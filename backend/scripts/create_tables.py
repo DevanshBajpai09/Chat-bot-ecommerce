@@ -1,7 +1,7 @@
 # backend/scripts/create_tables.py
 
-from backend.db import engine
-from backend.models.base import Base
+from db import engine
+from models.base import Base
 import backend.models.models  # ensures table definitions are registered
 import backend.models.conversations  # registers conversation tables
 
