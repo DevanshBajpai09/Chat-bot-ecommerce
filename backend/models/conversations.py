@@ -1,23 +1,18 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship
-from datetime import datetime
-from backend.models.models import Base
+# backend/models/conversations.py
+from sqlalchemy import Column, Integer, ForeignKey, String, DateTime
+from backend.models.base import Base  # ✅ shared base again
 
 class Conversation(Base):
-    __tablename__ = 'conversations'
+    __tablename__ = "conversations"
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
     title = Column(String, default="Untitled Conversation")
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete")
+    created_at = Column(DateTime)
 
 class Message(Base):
-    __tablename__ = 'messages'
+    __tablename__ = "messages"
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'), nullable=False)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
     role = Column(String)  # "user" or "ai"
-    content = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-    conversation = relationship("Conversation", back_populates="messages")
+    content = Column(String)
+    timestamp = Column(DateTime)

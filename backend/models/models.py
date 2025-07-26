@@ -1,8 +1,6 @@
 # backend/models/models.py
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from backend.models.base import Base  # ✅ use shared Base
 
 class DistributionCenter(Base):
     __tablename__ = 'distribution_centers'
