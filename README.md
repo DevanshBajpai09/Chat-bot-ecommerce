@@ -143,8 +143,6 @@ uvicorn api.main:app --reload
 🔗 [LinkedIn](https://linkedin.com/in/devanshbajpai09)  
 🔗 [GitHub](https://github.com/DevanshBajpai09)
 
----
 
-## 📃 License
 
 
