@@ -6,6 +6,7 @@ from datetime import datetime
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from models.conversations import Conversation, Message
 
 from models.models import DistributionCenter, Product, InventoryItem, User, Order, OrderItem , Base
 from db import engine, SessionLocal
