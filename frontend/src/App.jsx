@@ -1,13 +1,13 @@
 
 import './App.css'
-import ChatWindow from './Components/ChatWindow.jsx';
+import {ChatWindow} from './Components/ChatWindow.jsx';
 
 function App() {
   
 
   return (
    <>
-   <ChatWindow />;
+   <ChatWindow />
    </>
   )
 }

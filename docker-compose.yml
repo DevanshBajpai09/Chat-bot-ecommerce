@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    container_name: chat_db
+    restart: always
+    environment:
+      POSTGRES_DB: chatdb
+      POSTGRES_USER: devansh
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chat_backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://devansh:secret@db:5432/chatdb
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chat_frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    # ⛔ This volume is not needed for production builds
+    # Can remove unless you're developing live from the host
+    # - ./frontend:/app
+
+volumes:
+  pgdata:

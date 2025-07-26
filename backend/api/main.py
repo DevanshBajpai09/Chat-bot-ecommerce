@@ -1,16 +1,27 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
-from backend.db import SessionLocal
+from db import SessionLocal
 from backend.models.conversations import Conversation, Message
 from backend.models.models import User
 from backend.schemas.chat import ChatRequest, ChatResponse
-from backend.llm.llm import ask_gemini  # ✅ Gemini integration
+from backend.schemas.conversations import MessageSchema, ConversationSchema
+from backend.llm.llm import ask_gemini
 
 app = FastAPI()
 
-# Dependency to get DB session
+# ✅ Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # adjust if deployed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ✅ DB session dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -18,16 +29,16 @@ def get_db():
     finally:
         db.close()
 
+# ✅ POST /api/chat
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest, db: Session = Depends(get_db)):
-    # ✅ Check if user exists
     user = db.query(User).filter(User.id == request.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # ✅ Create new conversation if not provided
+    # Create or retrieve conversation
     if not request.conversation_id:
-        conversation = Conversation(user_id=request.user_id)
+        conversation = Conversation(user_id=user.id)
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
@@ -36,7 +47,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-    # ✅ Store user's message
+    # Store user message
     user_msg = Message(
         conversation_id=conversation.id,
         role="user",
@@ -45,14 +56,13 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     )
     db.add(user_msg)
 
-    # ✅ Build chat history for context
+    # Build chat history
     messages = db.query(Message).filter_by(conversation_id=conversation.id).order_by(Message.timestamp).all()
-    chat_history = ""
-    for msg in messages:
-        role = "User" if msg.role == "user" else "AI"
-        chat_history += f"{role}: {msg.content}\n"
+    chat_history = "\n".join(
+        f"{'User' if msg.role == 'user' else 'AI'}: {msg.content}" for msg in messages
+    )
 
-    # ✅ Prompt Gemini
+    # Get AI reply
     prompt = f"""
 You are a smart AI assistant helping customers on an e-commerce clothing platform.
 
@@ -66,22 +76,33 @@ Your tasks:
 - If you have enough info, generate a helpful and relevant response
 - Keep the tone polite and clear
 """
-    ai_reply_text = ask_gemini(prompt)
+    ai_response = ask_gemini(prompt)
 
-    # ✅ Store AI response
+    # Store AI reply
     ai_msg = Message(
         conversation_id=conversation.id,
         role="ai",
-        content=ai_reply_text,
+        content=ai_response,
         timestamp=datetime.utcnow()
     )
     db.add(ai_msg)
-
-    # ✅ Final DB commit
     db.commit()
 
     return ChatResponse(
         conversation_id=conversation.id,
         user_message=request.message,
-        ai_response=ai_reply_text
+        ai_response=ai_response
     )
+
+# ✅ GET /api/conversations?user_id=1
+@app.get("/api/conversations", response_model=list[ConversationSchema])
+def get_user_conversations(user_id: int, db: Session = Depends(get_db)):
+    return db.query(Conversation).filter(Conversation.user_id == user_id).order_by(Conversation.created_at.desc()).all()
+
+# ✅ GET /api/conversations/{conversation_id}
+@app.get("/api/conversations/{conversation_id}", response_model=list[MessageSchema])
+def get_conversation_messages(conversation_id: int, db: Session = Depends(get_db)):
+    messages = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.timestamp).all()
+    if not messages:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return messages
